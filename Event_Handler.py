@@ -14,12 +14,14 @@ def event_handler():
                 Global.shut_down_request = True
 
             if(e.key == pygame.K_a or e.key == pygame.K_LEFT):
-                pass
+                Global.move_left = True
             if(e.key == pygame.K_d or e.key == pygame.K_RIGHT):
+                Global.move_right = True
+            if(e.key == pygame.K_SPACE or e.key == pygame.K_UP):
                 pass
 
         if(e.type == pygame.KEYUP):
             if(e.key == pygame.K_a or e.key == pygame.K_LEFT):
-                pass
+                Global.move_left = False
             if(e.key == pygame.K_d or e.key == pygame.K_RIGHT):
-                pass
+                Global.move_right = False

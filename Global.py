@@ -1,6 +1,8 @@
 # The point of this file is to contain all of the global variables needed
 # across different scripts.
 
+from Character import Character
+
 Color = {
     "Black": (0, 0, 0),
     "White": (255, 255, 255),
@@ -18,4 +20,12 @@ shut_down_request = False
 
 screen = None
 
-test_y = 0
+
+# Character variables
+player = Character(10, 10)
+
+# Character movement
+move_left = False
+move_right = False
+is_jumping = False
+is_grounded = None
