@@ -17,11 +17,13 @@ def event_handler():
                 Global.move_left = True
             if(e.key == pygame.K_d or e.key == pygame.K_RIGHT):
                 Global.move_right = True
-            if(e.key == pygame.K_SPACE or e.key == pygame.K_UP):
-                pass
+            if(e.key == pygame.K_w or e.key == pygame.K_SPACE or e.key == pygame.K_UP):
+                Global.is_jumping = True
 
         if(e.type == pygame.KEYUP):
             if(e.key == pygame.K_a or e.key == pygame.K_LEFT):
                 Global.move_left = False
             if(e.key == pygame.K_d or e.key == pygame.K_RIGHT):
                 Global.move_right = False
+            if(e.key == pygame.K_w or e.key == pygame.K_SPACE or e.key == pygame.K_UP):
+                Global.is_jumping = False

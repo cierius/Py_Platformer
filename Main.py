@@ -2,7 +2,7 @@ import pygame
 import sys
 import time
 
-# My scripts below this
+# My scripts below this - py modules above
 import Global
 
 from Logger import *
