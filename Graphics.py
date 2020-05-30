@@ -7,4 +7,4 @@ def graphics():
     player.render()
 
     pygame.display.flip() # flip swaps the buffer canvas
-    Global.screen.fill(Color.get("Black"))
+    Global.screen.fill(Color["Black"])
