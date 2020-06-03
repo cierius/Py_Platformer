@@ -73,37 +73,53 @@ class Grid:
 
 
 class Button:
-    def __init__(self, _x, _y, _w=32, _h=32, _img=None, _text=None, _color=(255, 255, 0), _fill=1):
+    def __init__(self, _name, _x, _y, _w=32, _h=32, _img=None, _text=None, _color=(200, 200, 255), _fill=0):
+        self.name = _name
         self.x = _x
         self.y = _y
         self.w = _w
         self.h = _h
-        self.img = pygame.transform.scale(_img, (32, 32))
         self.text = _text
         self.color = _color
         self.fill = _fill
 
+        if(_img is not None):
+            self.img = pygame.transform.scale(_img, (32, 32))
+        else:
+            self.img = _img
+
 
     def render(self):
+        #Draws the select-able tiles
         if(self.img != None):
-            screen.blit(self.img, (self.x, self.y, self.w, self.h))
             pygame.draw.rect(screen, self.color, (self.x-3, self.y-3, self.w+6, self.h+6), self.fill)
+            screen.blit(self.img, (self.x, self.y, self.w, self.h))
+
+        #Draws the click-able buttons
         elif(self.text != None):
             pygame.draw.rect(screen, self.color, (self.x, self.y, self.w, self.h))
             screen.blit(font.render(str(self.text), False, (0, 0, 0)), (self.x, self.y))
 
     def coll(self):
-        if(_mx >= self.x and _mx <= self.x + self.w):
-            if(_my >= self.y and _my <= self.y + self.h):
+        if(mouse_coords[0] >= self.x and mouse_coords[0] <= self.x + self.w):
+            if(mouse_coords[1] >= self.y and mouse_coords[1] <= self.y + self.h):
                 return True
 
 
 def create_buttons():
     global button_list
-    #button_list.append(Button(5, 5, 100, 50, _text="Save", _color=(255, 0, 255)))
-    button_list.append(Button(13, 15, _img=imgs["Orange_Plat_Left.png"]))
-    button_list.append(Button(13, 57, _img=imgs["Orange_Plat_Mid.png"]))
-    button_list.append(Button(13, 99, _img=imgs["Orange_Plat_Right.png"]))
+
+    button_list.append(Button("Save_Button", 100, 5, 100, 50, _text="Save", _color=(0, 0, 255)))
+
+    i = 0
+    for img in imgs:
+        if(img != "Yellow.png"):
+            button_list.append(Button(img, 13, 15+(47*i), _img=imgs[img]))
+            print(img)
+            i += 1
+
+
+
 
 def create_bg_tiles():
     print("Creating Background")
@@ -128,6 +144,7 @@ def place_tile():
         if(tile.mouse_over(mouse_coords[0], mouse_coords[1])):
             tile.tile_type = cur_tile
 
+
 def erase_tile():
     for tile in Grid.grid_list:
         if(tile.mouse_over(mouse_coords[0], mouse_coords[1])):
@@ -145,7 +162,7 @@ def update():
 
 
 def event_handler():
-    global running, mouse_coords, mouse_origin, grid_panning
+    global running, mouse_coords, mouse_origin, grid_panning, cur_tile
 
     mouse_coords = pygame.mouse.get_pos()
 
@@ -155,7 +172,25 @@ def event_handler():
 
         if(e.type == pygame.MOUSEBUTTONDOWN):
             if(e.button == 1): #LMB
-                # TODO: Need to check mouse pos isnt over the tile selector bar or another button
+                for button in button_list:
+                    if(button.coll() is True and button.img is not None):
+                        for b in button_list: # I feel like there is a more effecient way to do this
+                            if(b.text is None):
+                                b.color = (200, 200, 255)
+
+                        cur_tile = imgs[button.name]
+                        button.color = (255, 255, 0)
+                        print(f"Changed tile to {button.name}")
+
+                        # return is used here to stop the place_tile from happening
+                        return
+                    elif(button.coll() is True and button.text is not None):
+                        print(button.name)
+                        # TODO: Add functions based on button.name
+
+                        # return is same as before, stops tile from being placed
+                        return
+
                 place_tile()
 
             if(e.button == 2): #MMB
@@ -163,6 +198,10 @@ def event_handler():
                 grid_panning = True
 
             if(e.button == 3): #RMB
+                for button in button_list:
+                    if(button.coll() is True):
+                        return
+
                 erase_tile()
 
         elif(e.type == pygame.MOUSEBUTTONUP):
@@ -184,7 +223,7 @@ def graphics():
             tile.render()
 
     # Tile selector box
-    pygame.draw.rect(screen, (0, 128, 255), (5, 5, 48, 512))
+    pygame.draw.rect(screen, (100, 100, 100), (5, 5, 48, 512))
 
     for button in button_list:
         button.render()
