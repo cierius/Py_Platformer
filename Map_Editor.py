@@ -119,8 +119,6 @@ def create_buttons():
             i += 1
 
 
-
-
 def create_bg_tiles():
     print("Creating Background")
     for column in range(int(SIZE[0]/64)):
@@ -231,6 +229,7 @@ def graphics():
     # Save button
     pygame.draw.rect(screen, (255, 255, 0), (5, 522, 64, 32))
     screen.blit(font.render("Save", False, (0, 0, 0)), (5, 522))
+
     # Clear button - Clears the screen of all tiles that were placed
     pygame.draw.rect(screen, (255, 0, 0), (5, 603, 64, 32))
 
