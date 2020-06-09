@@ -16,6 +16,10 @@ screen = None
 running = False
 font = None
 
+# Takes an input when starting the script. Will be used to load a map file so I don't have
+# to create buttons for loading maps via GUI
+starting_args = sys.argv
+
 # Initializing variables
 mouse_coords = (0, 0)
 mouse_origin = (0, 0)
@@ -73,7 +77,8 @@ class Grid:
 
 
 class Button:
-    def __init__(self, _name, _x, _y, _w=32, _h=32, _img=None, _text=None, _color=(200, 200, 255), _fill=0):
+    def __init__(self, _name, _x, _y, _w=32, _h=32, _img=None, _text=None, _color=(200, 200, 255),
+                 _fill=0, _selected=False):
         self.name = _name
         self.x = _x
         self.y = _y
@@ -82,6 +87,7 @@ class Button:
         self.text = _text
         self.color = _color
         self.fill = _fill
+        self.selected = _selected
 
         if(_img is not None):
             self.img = pygame.transform.scale(_img, (32, 32))
@@ -92,6 +98,11 @@ class Button:
     def render(self):
         #Draws the select-able tiles
         if(self.img != None):
+            if(self.selected):
+                self.color = (255, 255, 0) # Yellow
+            else:
+                self.color = (200, 200, 255) # Gray
+
             pygame.draw.rect(screen, self.color, (self.x-3, self.y-3, self.w+6, self.h+6), self.fill)
             screen.blit(self.img, (self.x, self.y, self.w, self.h))
 
@@ -109,7 +120,8 @@ class Button:
 def create_buttons():
     global button_list
 
-    button_list.append(Button("Save_Button", 100, 5, 100, 50, _text="Save", _color=(0, 0, 255)))
+    button_list.append(Button("Save_Button", 5, 522, 64, 32, _text="Save", _color=(0, 0, 255)))
+    button_list.append(Button("Clear_Button", 5, 603, 64, 32, _text="Clear", _color=(0, 0, 255)))
 
     i = 0
     for img in imgs:
@@ -117,8 +129,6 @@ def create_buttons():
             button_list.append(Button(img, 13, 15+(47*i), _img=imgs[img]))
             print(img)
             i += 1
-
-
 
 
 def create_bg_tiles():
@@ -171,21 +181,31 @@ def event_handler():
             running = False
 
         if(e.type == pygame.MOUSEBUTTONDOWN):
-            if(e.button == 1): #LMB
-                for button in button_list:
+            button_state = pygame.mouse.get_pressed()
+
+            if(button_state == (1, 0, 1)): #LMB and RMB for use on laptop / with no MMB
+                mouse_origin = mouse_coords
+                grid_panning = True
+
+            elif(e.button == 1): #LMB
+                for button in button_list: #this for loop tests all buttons, tile buttons and UI buttons
+                    # Tile buttons
                     if(button.coll() is True and button.img is not None):
                         for b in button_list: # I feel like there is a more effecient way to do this
                             if(b.text is None):
-                                b.color = (200, 200, 255)
+                                b.selected = False
 
                         cur_tile = imgs[button.name]
-                        button.color = (255, 255, 0)
+                        button.selected = True
                         print(f"Changed tile to {button.name}")
 
                         # return is used here to stop the place_tile from happening
                         return
+
+                        # UI Buttons
                     elif(button.coll() is True and button.text is not None):
-                        print(button.name)
+                        print(button.__getattribute__())
+
                         # TODO: Add functions based on button.name
 
                         # return is same as before, stops tile from being placed
@@ -193,19 +213,24 @@ def event_handler():
 
                 place_tile()
 
-            if(e.button == 2): #MMB
+            elif(e.button == 2): #MMB
                 mouse_origin = mouse_coords
                 grid_panning = True
 
-            if(e.button == 3): #RMB
+            elif(e.button == 3): #RMB
                 for button in button_list:
-                    if(button.coll() is True):
+                    if(button.coll() is True): # if click on any button don't erase a tile
                         return
 
                 erase_tile()
 
         elif(e.type == pygame.MOUSEBUTTONUP):
-            if(e.button == 2):
+            button_state = pygame.mouse.get_pressed()
+
+            if(button_state != (1, 0, 1)): #LMB and RMB
+                grid_panning = False
+
+            if(e.button == 2): # MMB
                 grid_panning = False
 
 
@@ -227,12 +252,6 @@ def graphics():
 
     for button in button_list:
         button.render()
-
-    # Save button
-    pygame.draw.rect(screen, (255, 255, 0), (5, 522, 64, 32))
-    screen.blit(font.render("Save", False, (0, 0, 0)), (5, 522))
-    # Clear button - Clears the screen of all tiles that were placed
-    pygame.draw.rect(screen, (255, 0, 0), (5, 603, 64, 32))
 
     # Clears the canvas and then colors it black allowing for new updates
     pygame.display.flip()
