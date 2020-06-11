@@ -32,6 +32,7 @@ grid = None
 grid_panning = False
 
 button_list = []
+scroll_pos = 0
 
 # List containing all of the addresses of the images to be loaded. Function finds them and adds them.
 tile_files = []
@@ -68,7 +69,7 @@ class Map:
         self.file = _file
         self.x = int(_x)
         self.y = int(_y)
-        self.background = []
+        self.background = [] # List used to hold the backround objects
         self.grid = [] # List used to hold the tile objects
 
         if(self.load() == False):
@@ -82,16 +83,34 @@ class Map:
             for row in range(self.y):
                 self.grid.append(Tile(column*16, row*16, 16, 16, None, None))
 
+
     def new_background(self, bg_img="Yellow.png"):
         print(f"Creating {self.x, self.y} Background!")
 
         # We can just call this method again if we want a different background
+        # just have to input a different bg tile
         if(len(self.background) > 0):
             self.background.clear()
 
         for column in range(int(self.x/4)):
             for row in range(int(self.y/4)):
                 self.background.append(Tile(column*64, row*64, 64, 64, imgs[bg_img], bg_img))
+
+
+    def pan(self, delta):
+        for tile in self.background:
+            tile.x += delta[0]
+            tile.y += delta[1]
+
+        for tile in self.grid:
+            tile.x += delta[0]
+            tile.y += delta[1]
+
+    def clear(self):
+        print("Clearing Grid!")
+        for t in self.grid:
+            t.tile_type = None
+            t.tile_name = None
 
 
     def save(self):
@@ -185,7 +204,7 @@ class Button:
 def create_buttons():
     global button_list
 
-    button_list.append(Button("Save_Button", 5, 522, 64, 32, _text="Save", _color=(0, 255, 0)))
+    button_list.append(Button("Save_Button", 5, 548, 64, 32, _text="Save", _color=(0, 255, 0)))
     button_list.append(Button("Clear_Button", 5, 603, 64, 32, _text="Clear", _color=(255, 0, 0)))
 
     i = 0
@@ -196,15 +215,17 @@ def create_buttons():
             i += 1
 
 
-def pan_grid(delta):
-    global map
-    for tile in map.background:
-        tile.x += delta[0]
-        tile.y += delta[1]
+def scroll_buttons(dir):
+    global button_list, scroll_pos
+    for b in button_list:
+        if(b.text == None):
+            if(dir == "Up"):
+                b.y -= 47
+                scroll_pos -= 1
 
-    for tile in map.grid:
-        tile.x += delta[0]
-        tile.y += delta[1]
+            elif(dir == "Down"):
+                b.y += 47
+                scroll_pos += 1
 
 
 def place_tile():
@@ -230,7 +251,7 @@ def update():
     if(grid_panning):
         mouse_delta = (mouse_coords[0] - mouse_origin[0],
                        mouse_coords[1] - mouse_origin[1])
-        pan_grid(mouse_delta)
+        map.pan(mouse_delta)
         mouse_origin = mouse_coords
 
 
@@ -270,10 +291,9 @@ def event_handler():
                         #print(button.name)
 
                         if(button.name == "Save_Button"):
-                            print("Saving!")
                             map.save()
                         elif(button.name == "Clear_Button"):
-                            print("Clearing!")
+                            map.clear()
                         # return is same as before, stops tile from being placed
                         return
 
@@ -289,6 +309,14 @@ def event_handler():
                         return
 
                 erase_tile()
+
+            elif(e.button == 4): # Mousewheel forward
+                print("MWF")
+                scroll_buttons("Up")
+
+            elif(e.button == 5):
+                print("MWB")
+                scroll_buttons("Down")
 
         elif(e.type == pygame.MOUSEBUTTONUP):
             button_state = pygame.mouse.get_pressed()
@@ -314,7 +342,7 @@ def graphics():
             tile.render()
 
     # Tile selector box
-    pygame.draw.rect(screen, (100, 100, 100), (5, 5, 48, 512))
+    pygame.draw.rect(screen, (100, 100, 100), (5, 5, 48, 522))
 
     for button in button_list:
         button.render()
@@ -388,6 +416,7 @@ def main():
         graphics()
         update()
 
+    map.save()
     pygame.quit()
     sys.exit()
 
