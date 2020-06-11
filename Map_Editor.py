@@ -9,6 +9,8 @@ import pickle
 import os
 import glob
 import pathlib
+import time
+
 
 # App variables / constant(s)
 SIZE = (640, 640)
@@ -18,7 +20,8 @@ font = None
 
 # Takes an input when starting the script. Will be used to load a map file so I don't have
 # to create buttons for loading maps via GUI
-starting_args = sys.argv
+starting_arg = sys.argv
+map = None
 
 # Initializing variables
 mouse_coords = (0, 0)
@@ -28,7 +31,6 @@ mouse_delta = (0, 0)
 grid = None
 grid_panning = False
 
-bg_tile_objs = []
 button_list = []
 
 # List containing all of the addresses of the images to be loaded. Function finds them and adds them.
@@ -40,12 +42,13 @@ cur_tile = None
 
 
 class Tile:
-    def __init__(self, _x, _y, _w, _h, _tile_type):
+    def __init__(self, _x, _y, _w, _h, _tile_type, _tile_name):
         self.x = _x
         self.y = _y
         self.w = _w
         self.h = _h
         self.tile_type = _tile_type
+        self.tile_name = _tile_name
 
     def render(self):
         if(self.tile_type != None):
@@ -60,20 +63,82 @@ class Tile:
                 return True
 
 
-class Grid:
-    grid_list = []
+class Map:
+    def __init__(self, _file=time.time(), _x=32, _y=32):
+        self.file = _file
+        self.x = int(_x)
+        self.y = int(_y)
+        self.background = []
+        self.grid = [] # List used to hold the tile objects
 
-    def __init__(self):
-        print("Creating Grid")
-        for column in range(int(SIZE[0]/16)):
-            for row in range(int(SIZE[1]/16)):
-                Grid.grid_list.append(Tile(column*16, row*16, 16, 16, None))
+        if(self.load() == False):
+            self.new_grid()
+            self.new_background()
+            self.save()
+
+    def new_grid(self):
+        print(f"Creating {self.x, self.y} Grid!")
+        for column in range(self.x):
+            for row in range(self.y):
+                self.grid.append(Tile(column*16, row*16, 16, 16, None, None))
+
+    def new_background(self, bg_img="Yellow.png"):
+        print(f"Creating {self.x, self.y} Background!")
+
+        # We can just call this method again if we want a different background
+        if(len(self.background) > 0):
+            self.background.clear()
+
+        for column in range(int(self.x/4)):
+            for row in range(int(self.y/4)):
+                self.background.append(Tile(column*64, row*64, 64, 64, imgs[bg_img], bg_img))
+
 
     def save(self):
-        pass
+        print(f"Saving {self.file}!")
+
+        f = open(f"Maps\\{self.file}.map", "wb")
+
+        pickle.dump((len(self.grid), len(self.background)), f)
+
+        for tile in self.grid:
+            pickle.dump((tile.x, tile.y, tile.w, tile.h, tile.tile_name), f)
+
+        for bg in self.background:
+            pickle.dump((bg.x, bg.y, bg.tile_name), f)
+
+        f.close()
+
 
     def load(self):
-        pass
+        print(f"Loading {self.file}!")
+
+        # Searches the Maps folder to see if we already have a .map file
+        for f in glob.glob(f"{pathlib.Path().absolute()}\\Maps\\*.map"):
+            if(str(f) == f"{str(pathlib.Path().absolute())}\\Maps\\{self.file}.map"):
+                s_time = time.time()
+                file = open(f"Maps\\{self.file}.map", "rb")
+
+                f_contents = pickle.load(file)
+
+                for t in range(f_contents[0]):
+                    temp = pickle.load(file)
+                    print(temp)
+                    if(temp[4] != None):
+                        self.grid.append(Tile(temp[0], temp[1], temp[2], temp[3], imgs[temp[4]], temp[4]))
+                    else:
+                        self.grid.append(Tile(temp[0], temp[1], temp[2], temp[3], None, None))
+
+                for bg in range(f_contents[1]):
+                    temp = pickle.load(file)
+                    self.background.append(Tile(temp[0], temp[1], 64, 64, imgs[temp[2]], temp[2]))
+
+                file.close()
+                print(f"Loading time: {time.time() - s_time}")
+                return True
+
+        print(f"No {self.file} Found! Creating New File Instead!")
+        return False
 
 
 class Button:
@@ -109,7 +174,7 @@ class Button:
         #Draws the click-able buttons
         elif(self.text != None):
             pygame.draw.rect(screen, self.color, (self.x, self.y, self.w, self.h))
-            screen.blit(font.render(str(self.text), False, (0, 0, 0)), (self.x, self.y))
+            screen.blit(font.render(str(self.text), False, (0, 0, 0)), (self.x + 10, self.y + 5))
 
     def coll(self):
         if(mouse_coords[0] >= self.x and mouse_coords[0] <= self.x + self.w):
@@ -120,8 +185,8 @@ class Button:
 def create_buttons():
     global button_list
 
-    button_list.append(Button("Save_Button", 5, 522, 64, 32, _text="Save", _color=(0, 0, 255)))
-    button_list.append(Button("Clear_Button", 5, 603, 64, 32, _text="Clear", _color=(0, 0, 255)))
+    button_list.append(Button("Save_Button", 5, 522, 64, 32, _text="Save", _color=(0, 255, 0)))
+    button_list.append(Button("Clear_Button", 5, 603, 64, 32, _text="Clear", _color=(255, 0, 0)))
 
     i = 0
     for img in imgs:
@@ -131,34 +196,32 @@ def create_buttons():
             i += 1
 
 
-def create_bg_tiles():
-    print("Creating Background")
-    for column in range(int(SIZE[0]/64)):
-        for row in range(int(SIZE[1]/64)):
-            bg_tile_objs.append(Tile(column*64, row*64, 64, 64, imgs["Yellow.png"]))
-
-
 def pan_grid(delta):
-    global bg_tile_objs, Grid
-    for tile in bg_tile_objs:
+    global map
+    for tile in map.background:
         tile.x += delta[0]
         tile.y += delta[1]
 
-    for tile in Grid.grid_list:
+    for tile in map.grid:
         tile.x += delta[0]
         tile.y += delta[1]
 
 
 def place_tile():
-    for tile in Grid.grid_list:
+    for tile in map.grid:
         if(tile.mouse_over(mouse_coords[0], mouse_coords[1])):
             tile.tile_type = cur_tile
 
+            for key, val in imgs.items(): # Finds the key based on the value
+                if(cur_tile == val):
+                    tile.tile_name = key
+
 
 def erase_tile():
-    for tile in Grid.grid_list:
+    for tile in map.grid:
         if(tile.mouse_over(mouse_coords[0], mouse_coords[1])):
             tile.tile_type = None
+            tile.tile_name = None
 
 
 def update():
@@ -204,10 +267,13 @@ def event_handler():
 
                         # UI Buttons
                     elif(button.coll() is True and button.text is not None):
-                        print(button.__getattribute__())
+                        #print(button.name)
 
-                        # TODO: Add functions based on button.name
-
+                        if(button.name == "Save_Button"):
+                            print("Saving!")
+                            map.save()
+                        elif(button.name == "Clear_Button"):
+                            print("Clearing!")
                         # return is same as before, stops tile from being placed
                         return
 
@@ -236,11 +302,11 @@ def event_handler():
 
 def graphics():
     # Renders the background tiles all the time
-    for tile in bg_tile_objs:
+    for tile in map.background:
         tile.render()
 
     # Renders the moused over grid tile
-    for tile in Grid.grid_list:
+    for tile in map.grid:
         if(tile.tile_type == None):
             if(tile.mouse_over(mouse_coords[0], mouse_coords[1])):
                 tile.outline()
@@ -272,7 +338,7 @@ def load_image(file):
 
 
 def init():
-    global screen, grid, cur_tile, font
+    global screen, map, cur_tile, font
 
     if(pygame.init()):
         screen = pygame.display.set_mode(SIZE, 0, 32)
@@ -286,9 +352,26 @@ def init():
             imgs[file[str(pathlib.Path().absolute()).__len__()+25:]] = load_image(file)
             print(f"Loaded {file}!")
 
-        create_bg_tiles()
         create_buttons()
-        grid = Grid()
+
+        # Creates / Loads the actual map file
+        if(len(starting_arg) == 2): # 1 Input
+            if(starting_arg[1].isnumeric()):
+                map = Map(_x=starting_arg[1], _y=starting_arg[1])
+            else:
+                map = Map(_file=starting_arg[1])
+
+        elif(len(starting_arg) == 3): # 2 Inputs
+            if(starting_arg[1].isnumeric() and starting_arg[2].isnumeric()):
+                map = Map(_x=starting_arg[1], _y=starting_arg[2])
+            else:
+                map = Map(_file=starting_arg[1], _x=starting_arg[2], _y=starting_arg[2])
+
+        elif(len(starting_arg) == 4): # 3 Inputs
+            map = Map(_file=starting_arg[1], _x=starting_arg[2], _y=starting_arg[3])
+
+        else: # 0 Inputs
+            map = Map()
 
         cur_tile = imgs["Orange_Plat_Mid.png"]
 

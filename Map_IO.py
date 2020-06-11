@@ -2,10 +2,18 @@ import Global
 import pickle
 
 class Map:
-    def __init__(self, _file, _grid):
+    def __init__(self, _x, _y, _file=None):
         self.file = _file
-        self.grid = _grid
-        self.map = [] # List used to hold the tile objects
+        self.grid = [] # List used to hold the tile objects
+
+        if(self.file != None):
+            self.load()
+
+    def new_grid(self):
+        print("Creating Grid!")
+        for column in range(self.x):
+            for row in range(self.y):
+                self.grid.append(Tile(column*16, row*16, 16, 16, None))
 
     def save(self):
         """
@@ -17,6 +25,7 @@ class Map:
 
 
     def load(self):
+        print(f"Loading {self.file}!")
         """
         Open file
         Unpickle file using string.split
